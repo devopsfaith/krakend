@@ -54,6 +54,8 @@ func CustomErrorEndpointHandler(configuration *config.EndpointConfig, prxy proxy
 				if isCacheEnabled {
 					c.Header("Cache-Control", cacheControlHeaderValue)
 				}
+			} else if response.Metadata.IsRequired {
+				c.Status(response.Metadata.StatusCode)
 			}
 
 			for k, vs := range response.Metadata.Headers {

@@ -356,6 +356,20 @@
                     "url_pattern": "/"
                 }
             ]
+        },
+        {
+            "endpoint": "/required_backend",
+            "backend": [
+                {
+                    "url_pattern": "/backend1",
+                    "host": [ "{{.b3}}" ]
+                },
+                {
+                    "url_pattern": "/backend2",
+                    "host": [ "{{.b12}}" ],
+                    "required": true
+                }
+            ]
         }
     ]
 }

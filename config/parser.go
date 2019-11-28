@@ -241,6 +241,7 @@ type parseableBackend struct {
 	Mapping                  map[string]string `json:"mapping"`
 	Encoding                 string            `json:"encoding"`
 	IsCollection             bool              `json:"is_collection"`
+	Required                 bool              `json:"required"`
 	Target                   string            `json:"target"`
 	ExtraConfig              *ExtraConfig      `json:"extra_config,omitempty"`
 	SD                       string            `json:"sd"`
@@ -258,6 +259,7 @@ func (p *parseableBackend) normalize() *Backend {
 		Mapping:                  p.Mapping,
 		Encoding:                 p.Encoding,
 		IsCollection:             p.IsCollection,
+		Required:                 p.Required,
 		Target:                   p.Target,
 		SD:                       p.SD,
 	}

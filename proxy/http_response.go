@@ -42,6 +42,27 @@ func DefaultHTTPResponseParserFactory(cfg HTTPResponseParserConfig) HTTPResponse
 	}
 }
 
+// HTTPResponseWithErrorParserFactory is the default implementation of HTTPResponseParserFactory
+func HTTPResponseWithErrorParserFactory(cfg HTTPResponseParserConfig) HTTPResponseParser {
+	return func(ctx context.Context, resp *http.Response) (*Response, error) {
+		var data map[string]interface{}
+		err := cfg.Decoder(resp.Body, &data)
+		resp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		newResponse := Response{Data: data, IsComplete: true}
+		if resp.StatusCode >= 400 {
+			newResponse.Metadata.StatusCode = resp.StatusCode
+			newResponse.IsComplete = false
+			newResponse.Metadata.IsRequired = true
+		}
+		newResponse = cfg.EntityFormatter.Format(newResponse)
+		return &newResponse, nil
+	}
+}
+
 // NoOpHTTPResponseParser is a HTTPResponseParser implementation that just copies the
 // http response body into the proxy response IO
 func NoOpHTTPResponseParser(ctx context.Context, resp *http.Response) (*Response, error) {

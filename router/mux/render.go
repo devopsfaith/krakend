@@ -71,6 +71,9 @@ func jsonRender(w http.ResponseWriter, response *proxy.Response) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if response.Metadata.IsRequired && response.Metadata.StatusCode > 0 {
+		w.WriteHeader(response.Metadata.StatusCode)
+	}
 	w.Write(js)
 }
 
@@ -89,6 +92,9 @@ func stringRender(w http.ResponseWriter, response *proxy.Response) {
 	if !ok {
 		w.Write([]byte{})
 		return
+	}
+	if response.Metadata.IsRequired && response.Metadata.StatusCode > 0 {
+		w.WriteHeader(response.Metadata.StatusCode)
 	}
 	w.Write([]byte(msg))
 }

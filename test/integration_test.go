@@ -244,8 +244,8 @@ func testKrakenD(t *testing.T, runRouter func(logging.Logger, *config.ServiceCon
 			name: "header-params-all",
 			url:  "/header-params-test/all-params",
 			headers: map[string]string{
-				"x-Test-1": "some",
-				"X-TEST-2": "none",
+				"x-Test-1":   "some",
+				"X-TEST-2":   "none",
 				"User-Agent": "KrakenD Test",
 			},
 			expHeaders: defaultHeaders,
@@ -304,6 +304,13 @@ func testKrakenD(t *testing.T, runRouter func(logging.Logger, *config.ServiceCon
 			},
 			expHeaders: defaultHeaders,
 			expBody:    `{"headers":{"Accept-Encoding":["gzip"],"User-Agent":["KrakenD Version undefined"],"X-Forwarded-For":["123.45.67.89"]}}`,
+		},
+		{
+			name:          "required backend request",
+			url:           "/required_backend",
+			expHeaders:    incompleteHeader,
+			expStatusCode: 422,
+			expBody:       `{"data":"some err"}`,
 		},
 	} {
 		tc := tc
@@ -469,6 +476,14 @@ func setupBackend(t *testing.T) (*config.ServiceConfig, error) {
 		})
 	}))
 	data["b11"] = b11.URL
+
+	// some err
+	b12 := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusUnprocessableEntity)
+		fmt.Fprintln(rw, `{"data":"some err"}`)
+	}))
+	data["b12"] = b12.URL
 
 	c, err := loadConfig(data)
 	if err != nil {

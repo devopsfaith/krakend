@@ -205,6 +205,8 @@ type Backend struct {
 	Target string `mapstructure:"target"`
 	// name of the service discovery driver to use
 	SD string `mapstructure:"sd"`
+	// mandatory request, the error of which is returned instead of the answer
+	Required bool `mapstructure:"required"`
 
 	// list of keys to be replaced in the URLPattern
 	URLKeys []string

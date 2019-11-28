@@ -1,4 +1,4 @@
-//Package proxy provides proxy and proxy middleware interfaces and implementations.
+// Package proxy provides proxy and proxy middleware interfaces and implementations.
 package proxy
 
 import (
@@ -16,6 +16,7 @@ const Namespace = "github.com/devopsfaith/krakend/proxy"
 type Metadata struct {
 	Headers    map[string][]string
 	StatusCode int
+	IsRequired bool
 }
 
 // Response is the entity returned by the proxy

@@ -293,6 +293,12 @@ func combineData(total int, parts []*Response) *Response {
 			isComplete = false
 			continue
 		}
+		if part.Metadata.IsRequired && part.Metadata.StatusCode >= 400 {
+			// return the first error encountered
+			retResponse = part
+			retResponse.IsComplete = false
+			return retResponse
+		}
 		isComplete = isComplete && part.IsComplete
 		if retResponse == nil {
 			retResponse = part

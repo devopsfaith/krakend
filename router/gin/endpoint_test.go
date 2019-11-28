@@ -82,6 +82,34 @@ func TestEndpointHandler_okAllParams(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 }
 
+func TestEndpointHandler_RequiredBackend(t *testing.T) {
+	p := func(_ context.Context, req *proxy.Request) (*proxy.Response, error) {
+		return &proxy.Response{
+			IsComplete: false,
+			Data:       map[string]interface{}{"data": "some_err"},
+			Metadata: proxy.Metadata{
+				Headers:    map[string][]string{"X-KrakenD-Completed": {"false"}},
+				StatusCode: 422,
+				IsRequired: true,
+			},
+		}, nil
+	}
+	endpointHandlerTestCase{
+		timeout:            10,
+		proxy:              p,
+		method:             "GET",
+		expectedBody:       `{"data":"some_err"}`,
+		expectedCache:      "",
+		expectedContent:    "application/json; charset=utf-8",
+		expectedStatusCode: http.StatusUnprocessableEntity,
+		completed:          false,
+		queryString:        []string{"*"},
+		headers:            []string{"*"},
+		expectedHeaders:    map[string][]string{"X-KrakenD-Completed": {"false"}},
+	}.test(t)
+	time.Sleep(5 * time.Millisecond)
+}
+
 var ctxContent = map[string]interface{}{
 	"bool":   true,
 	"int":    42,
