@@ -55,6 +55,46 @@ func TestEndpointHandler_ok(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 }
 
+func TestEndpointHandler_leaves_content_type_unaltered(t *testing.T) {
+	p := func(ctx context.Context, req *proxy.Request) (*proxy.Response, error) {
+		if v, ok := ctx.Value("bool").(bool); !ok || !v {
+			t.Errorf("unexpected bool context value: %v", v)
+		}
+		if v, ok := ctx.Value("int").(int); !ok || v != 42 {
+			t.Errorf("unexpected int context value: %v", v)
+		}
+		if v, ok := ctx.Value("string").(string); !ok || v != "supu" {
+			t.Errorf("unexpected string context value: %v", v)
+		}
+		data, _ := json.Marshal(req.Query)
+		if string(data) != `{"b":["1"],"c[]":["x","y"],"d":["1","2"]}` {
+			t.Errorf("unexpected querystring: %s", data)
+		}
+		return &proxy.Response{
+			IsComplete: true,
+			Data:       map[string]interface{}{"supu": "tupu"},
+			Metadata: proxy.Metadata{
+				Headers: map[string][]string{
+					"a": {"a1", "a2"},
+					"Content-Type": {"application/vnd.api+json; charset=utf-8"},
+				},
+			},
+		}, nil
+	}
+
+	endpointHandlerTestCase{
+		timeout:            10,
+		proxy:              p,
+		method:             "GET",
+		expectedBody:       "{\"supu\":\"tupu\"}",
+		expectedCache:      "public, max-age=21600",
+		expectedContent:    "application/vnd.api+json; charset=utf-8",
+		expectedStatusCode: http.StatusOK,
+		completed:          true,
+	}.testWithRequestContentType(t, "application/vnd.api+json")
+	time.Sleep(5 * time.Millisecond)
+}
+
 func TestEndpointHandler_okAllParams(t *testing.T) {
 	p := func(_ context.Context, req *proxy.Request) (*proxy.Response, error) {
 		return &proxy.Response{
@@ -243,6 +283,10 @@ type endpointHandlerTestCase struct {
 }
 
 func (tc endpointHandlerTestCase) test(t *testing.T) {
+	tc.testWithRequestContentType(t, "application/json")
+}
+
+func (tc endpointHandlerTestCase) testWithRequestContentType(t *testing.T, requestContentType string) {
 	endpoint := &config.EndpointConfig{
 		Method:      "GET",
 		Timeout:     tc.timeout,
@@ -259,7 +303,7 @@ func (tc endpointHandlerTestCase) test(t *testing.T) {
 	server := startGinServer(EndpointHandler(endpoint, tc.proxy))
 
 	req, _ := http.NewRequest(tc.method, "http://127.0.0.1:8080/_gin_endpoint/a?a=42&b=1&c[]=x&c[]=y&d=1&d=2", ioutil.NopCloser(&bytes.Buffer{}))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", requestContentType)
 
 	w := httptest.NewRecorder()
 	server.ServeHTTP(w, req)

@@ -140,6 +140,10 @@ type ServiceConfig struct {
 	// DisableStrictREST flags if the REST enforcement is disabled
 	DisableStrictREST bool `mapstructure:"disable_rest"`
 
+	// Do not treat responses with Status Code other than 200 Ok or 201 Created as an Error.
+	// Possible values are "yes" or "no"
+	StatusCodeUnchecked string `mapstructure:"status_code_unchecked"`
+
 	// Plugin defines the configuration for the plugin loader
 	Plugin *Plugin `mapstructure:"plugin"`
 
@@ -175,6 +179,10 @@ type EndpointConfig struct {
 	HeadersToPass []string `mapstructure:"headers_to_pass"`
 	// OutputEncoding defines the encoding strategy to use for the endpoint responses
 	OutputEncoding string `mapstructure:"output_encoding"`
+
+	// Do not treat responses with Status Code other than 200 Ok or 201 Created as an Error.
+	// Possible values are "yes" or "no"
+	StatusCodeUnchecked string `mapstructure:"status_code_unchecked"`
 }
 
 // Backend defines how krakend should connect to the backend service (the API resource to consume)
@@ -216,6 +224,13 @@ type Backend struct {
 	Decoder encoding.Decoder `json:"-"`
 	// Backend Extra configuration for customized behaviours
 	ExtraConfig ExtraConfig `mapstructure:"extra_config"`
+
+	// Do not treat responses with Status Code other than 200 Ok or 201 Created as an Error.
+	// Possible values are "yes" or "no"
+	StatusCodeUnchecked string `mapstructure:"status_code_unchecked"`
+
+	// A Flag marking a backend whose response status code will be taken as the endpoint response status code
+	StatusCodeDictator bool `mapstructure:"status_code_dictator"`
 }
 
 // Plugin contains the config required by the plugin module
@@ -320,6 +335,9 @@ func (s *ServiceConfig) initGlobalParams() {
 
 func (s *ServiceConfig) initEndpoints() error {
 	for i, e := range s.Endpoints {
+		if e.StatusCodeUnchecked == "" {
+			e.StatusCodeUnchecked = s.StatusCodeUnchecked
+		}
 		e.Endpoint = s.uriParser.CleanPath(e.Endpoint)
 
 		if err := e.validate(); err != nil {
@@ -343,6 +361,9 @@ func (s *ServiceConfig) initEndpoints() error {
 		e.ExtraConfig.sanitize()
 
 		for j, b := range e.Backend {
+			if b.StatusCodeUnchecked == "" {
+				b.StatusCodeUnchecked = e.StatusCodeUnchecked
+			}
 			s.initBackendDefaults(i, j)
 
 			if err := s.initBackendURLMappings(i, j, inputSet); err != nil {

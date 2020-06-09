@@ -16,6 +16,7 @@ const Namespace = "github.com/devopsfaith/krakend/proxy"
 type Metadata struct {
 	Headers    map[string][]string
 	StatusCode int
+	IsStatusCodeDictator bool
 }
 
 // Response is the entity returned by the proxy

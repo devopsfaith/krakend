@@ -91,6 +91,9 @@ func stringRender(c *gin.Context, response *proxy.Response) {
 
 func jsonRender(c *gin.Context, response *proxy.Response) {
 	status := c.Writer.Status()
+	if response != nil && response.Metadata.StatusCode != 0 {
+		status = response.Metadata.StatusCode
+	}
 	if response == nil {
 		c.JSON(status, emptyResponse)
 		return

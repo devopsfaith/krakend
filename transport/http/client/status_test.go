@@ -78,6 +78,51 @@ func TestDetailedHTTPStatusHandler(t *testing.T) {
 	}
 }
 
+func TestUncheckedHTTPStatusHandler(t *testing.T) {
+	cfg := &config.Backend{
+		StatusCodeUnchecked: "yes",
+	}
+	sh := GetHTTPStatusHandler(cfg)
+
+	for _, code := range []int{http.StatusOK, http.StatusCreated, http.StatusAccepted} {
+		resp := &http.Response{
+			StatusCode: code,
+			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"foo":"bar"}`)),
+		}
+
+		r, err := sh(context.Background(), resp)
+
+		if r != resp {
+			t.Errorf("#%d unexpected response: %v", code, r)
+			return
+		}
+
+		if err != nil {
+			t.Errorf("#%d unexpected error: %s", code, err.Error())
+			return
+		}
+	}
+
+	for i, code := range statusCodes {
+		resp := &http.Response{
+			StatusCode: code,
+			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"id":1}`)),
+		}
+
+		r, err := sh(context.Background(), resp)
+
+		if r != resp || err != nil {
+			t.Errorf("#%d unexpected response: %v", i, r)
+			return
+		}
+
+		if r.StatusCode != code {
+			t.Errorf("#%d unexpected status code: %d", i, r.StatusCode)
+			return
+		}
+	}
+}
+
 func TestDefaultHTTPStatusHandler(t *testing.T) {
 	sh := GetHTTPStatusHandler(&config.Backend{})
 

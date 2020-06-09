@@ -24,6 +24,9 @@ type HTTPStatusHandler func(context.Context, *http.Response) (*http.Response, er
 // at the extra config, it returns a DetailedHTTPStatusHandler. Otherwise, it returns a
 // DefaultHTTPStatusHandler
 func GetHTTPStatusHandler(remote *config.Backend) HTTPStatusHandler {
+	if remote.StatusCodeUnchecked == "yes" {
+		return UncheckedHTTPStatusHandler
+	}
 	if e, ok := remote.ExtraConfig[Namespace]; ok {
 		if m, ok := e.(map[string]interface{}); ok {
 			if v, ok := m["return_error_details"]; ok {
@@ -42,6 +45,10 @@ func DefaultHTTPStatusHandler(ctx context.Context, resp *http.Response) (*http.R
 		return nil, ErrInvalidStatusCode
 	}
 
+	return resp, nil
+}
+
+func UncheckedHTTPStatusHandler(ctx context.Context, resp *http.Response) (*http.Response, error) {
 	return resp, nil
 }
 

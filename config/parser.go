@@ -151,6 +151,7 @@ type parseableServiceConfig struct {
 	DialerTimeout         string                     `json:"dialer_timeout"`
 	DialerFallbackDelay   string                     `json:"dialer_fallback_delay"`
 	DialerKeepAlive       string                     `json:"dialer_keep_alive"`
+	StatusCodeUnchecked   string                     `json:"status_code_unchecked"`
 	Debug                 bool
 	Plugin                *Plugin       `json:"plugin,omitempty"`
 	TLS                   *parseableTLS `json:"tls,omitempty"`
@@ -181,6 +182,7 @@ func (p *parseableServiceConfig) normalize() ServiceConfig {
 		DialerKeepAlive:       parseDuration(p.DialerKeepAlive),
 		OutputEncoding:        p.OutputEncoding,
 		Plugin:                p.Plugin,
+		StatusCodeUnchecked:   p.StatusCodeUnchecked,
 	}
 	if p.TLS != nil {
 		cfg.TLS = &TLS{
@@ -227,6 +229,7 @@ type parseableEndpointConfig struct {
 	ExtraConfig     *ExtraConfig        `json:"extra_config,omitempty"`
 	HeadersToPass   []string            `json:"headers_to_pass"`
 	OutputEncoding  string              `json:"output_encoding"`
+	StatusCodeUnchecked  string         `json:"status_code_unchecked"`
 }
 
 func (p *parseableEndpointConfig) normalize() *EndpointConfig {
@@ -239,6 +242,7 @@ func (p *parseableEndpointConfig) normalize() *EndpointConfig {
 		QueryString:     p.QueryString,
 		HeadersToPass:   p.HeadersToPass,
 		OutputEncoding:  p.OutputEncoding,
+		StatusCodeUnchecked: p.StatusCodeUnchecked,
 	}
 	if p.ExtraConfig != nil {
 		e.ExtraConfig = *p.ExtraConfig
@@ -265,6 +269,8 @@ type parseableBackend struct {
 	Target                   string            `json:"target"`
 	ExtraConfig              *ExtraConfig      `json:"extra_config,omitempty"`
 	SD                       string            `json:"sd"`
+	StatusCodeUnchecked  	 string            `json:"status_code_unchecked"`
+	StatusCodeDictator       bool              `json:"status_code_dictator"`
 }
 
 func (p *parseableBackend) normalize() *Backend {
@@ -281,6 +287,8 @@ func (p *parseableBackend) normalize() *Backend {
 		IsCollection:             p.IsCollection,
 		Target:                   p.Target,
 		SD:                       p.SD,
+		StatusCodeUnchecked:      p.StatusCodeUnchecked,
+		StatusCodeDictator:       p.StatusCodeDictator,
 	}
 	if p.ExtraConfig != nil {
 		b.ExtraConfig = *p.ExtraConfig

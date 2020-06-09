@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"errors"
+	"github.com/devopsfaith/krakend/test"
 	"testing"
 	"time"
 
@@ -40,6 +41,49 @@ func TestNewMergeDataMiddleware_ok(t *testing.T) {
 			t.Errorf("We were expecting a completed response but we got an incompleted one!\n")
 		}
 	}
+}
+
+func TestNewMergeDataMiddleware_content_type_is_unaltered(t *testing.T) {
+	timeout := 500
+	backend := config.Backend{
+		StatusCodeDictator: true,
+	}
+	endpoint := config.EndpointConfig{
+		Backend: []*config.Backend{&backend, &backend},
+		Timeout: time.Duration(timeout) * time.Millisecond,
+	}
+	mw := NewMergeDataMiddleware(&endpoint)
+	metadata := Metadata{
+		Headers: map[string][]string{"Content-Type": {"application/vnd.api+json; charset=utf-8"}},
+		IsStatusCodeDictator: true,
+	}
+	p := mw(
+		dummyProxy(&Response{Data: map[string]interface{}{"supu": 42}, IsComplete: true, Metadata: metadata}),
+		dummyProxy(&Response{Data: map[string]interface{}{"tupu": true}, IsComplete: true, Metadata: metadata}))
+	mustEnd := time.After(time.Duration(2*timeout) * time.Millisecond)
+	out, err := p(context.Background(), &Request{})
+	if err != nil {
+		t.Errorf("The middleware propagated an unexpected error: %s\n", err.Error())
+	}
+	if out == nil {
+		t.Errorf("The proxy returned a null result\n")
+		return
+	}
+	select {
+	case <-mustEnd:
+		t.Errorf("We were expecting a response but we got none\n")
+	default:
+		if len(out.Data) != 2 {
+			t.Errorf("We weren't expecting a partial response but we got %v!\n", out)
+		}
+		if !out.IsComplete {
+			t.Errorf("We were expecting a completed response but we got an incompleted one!\n")
+		}
+	}
+	contentType := out.Metadata.Headers["Content-Type"]
+	test.AssertIntEqual(t, 1, len(contentType), "No Content-Type")
+	test.AssertEqual(t, "application/vnd.api+json; charset=utf-8", contentType[0],
+		"Incorrect Content-Type")
 }
 
 func TestNewMergeDataMiddleware_sequential(t *testing.T) {

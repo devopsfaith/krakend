@@ -3,6 +3,7 @@ package proxy
 import (
 	"compress/gzip"
 	"context"
+	"github.com/devopsfaith/krakend/config"
 	"io"
 	"net/http"
 
@@ -16,12 +17,14 @@ type HTTPResponseParser func(context.Context, *http.Response) (*Response, error)
 var DefaultHTTPResponseParserConfig = HTTPResponseParserConfig{
 	func(_ io.Reader, _ *map[string]interface{}) error { return nil },
 	EntityFormatterFunc(func(r Response) Response { return r }),
+	nil,
 }
 
 // HTTPResponseParserConfig contains the config for a given HttpResponseParser
 type HTTPResponseParserConfig struct {
 	Decoder         encoding.Decoder
 	EntityFormatter EntityFormatter
+	remote *config.Backend
 }
 
 // HTTPResponseParserFactory creates HTTPResponseParser from a given HTTPResponseParserConfig
@@ -46,7 +49,21 @@ func DefaultHTTPResponseParserFactory(cfg HTTPResponseParserConfig) HTTPResponse
 			return nil, err
 		}
 
-		newResponse := Response{Data: data, IsComplete: true}
+		newResponse := Response{
+			Data: data,
+			IsComplete: true,
+		}
+		if cfg.remote != nil && cfg.remote.StatusCodeDictator {
+			newResponse.Metadata.StatusCode = resp.StatusCode
+			newResponse.Metadata.IsStatusCodeDictator = true
+			contentType := resp.Header.Get("Content-Type")
+			if contentType != "" {
+				if newResponse.Metadata.Headers == nil {
+					newResponse.Metadata.Headers = make(map[string][]string)
+				}
+				newResponse.Metadata.Headers["Content-Type"] = []string{contentType}
+			}
+		}
 		newResponse = cfg.EntityFormatter.Format(newResponse)
 		return &newResponse, nil
 	}

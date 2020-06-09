@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/devopsfaith/krakend/test"
 	"strings"
 	"testing"
 	"time"
@@ -204,9 +205,88 @@ func TestConfig_init(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	if hash != "08DTVE8Iwh1M8aRURBgk/rYcWc6BIwIgW/BflQo1OnE=" {
+	if hash != "K3dLeq+HaXUIPHdKQnwAF8/qJdglHCKn2FqF7zwDGR8=" {
 		t.Errorf("unexpected hash: %s", hash)
 	}
+}
+
+func TestConfig_globalStatusCodeIdentityMapping_can_be_overriden(t *testing.T) {
+	fooBackend := Backend{
+		URLPattern: "/foo/{a}",
+		Host:       []string{"https://foo.com"},
+	}
+	barBackend := Backend{
+		URLPattern: "/bar/{b}",
+		Host:       []string{"https://bar.com"},
+		StatusCodeUnchecked: "no",
+	}
+	bazBackend := Backend{
+		URLPattern: "/baz/{a}",
+		Host:       []string{"https://baz.com"},
+	}
+
+	fooBackend2 := Backend{
+		URLPattern: "/foo2/{a}",
+		Host:       []string{"https://foo.com"},
+	}
+	barBackend2 := Backend{
+		URLPattern: "/bar2/{b}",
+		Host:       []string{"https://bar.com"},
+		StatusCodeUnchecked: "yes",
+	}
+	bazBackend2 := Backend{
+		URLPattern: "/baz2/{a}",
+		Host:       []string{"https://baz.com"},
+	}
+
+	userEndpoint := EndpointConfig{
+		Endpoint: "/users/{a}/{b}",
+		Backend:  []*Backend{&fooBackend, &barBackend, &bazBackend},
+	}
+
+	fooEndpoint := EndpointConfig{
+		Endpoint: "/foo/{a}/{b}",
+		Backend:  []*Backend{&fooBackend2, &barBackend2, &bazBackend2},
+		StatusCodeUnchecked: "no",
+	}
+
+	subject := ServiceConfig{
+		Version:             ConfigVersion,
+		Timeout:             5 * time.Second,
+		CacheTTL:            30 * time.Minute,
+		Host:                []string{"http://127.0.0.1:8080"},
+		Endpoints:           []*EndpointConfig{&userEndpoint, &fooEndpoint},
+		StatusCodeUnchecked: "yes",
+	}
+
+	if err := subject.Init(); err != nil {
+		t.Error("Error at the configuration init:", err.Error())
+	}
+
+
+	test.AssertEqual(
+		t, "yes", fooBackend.StatusCodeUnchecked,
+		"Global StatusCodeUnchecked settings not applied to the fooBackend")
+
+	test.AssertEqual(
+		t, "no", barBackend.StatusCodeUnchecked,
+		"Global StatusCodeUnchecked settings is not overridden in barBackend")
+
+	test.AssertEqual(
+		t, "yes", bazBackend.StatusCodeUnchecked,
+		"Global StatusCodeUnchecked settings not applied to the bazBackend")
+
+	test.AssertEqual(
+		t, "no", fooBackend2.StatusCodeUnchecked,
+		"Endpoint StatusCodeUnchecked settings not applied to the fooBackend2")
+
+	test.AssertEqual(
+		t, "yes", barBackend2.StatusCodeUnchecked,
+		"Endpoint StatusCodeUnchecked settings is not overridden in barBackend2")
+
+	test.AssertEqual(
+		t, "no", bazBackend2.StatusCodeUnchecked,
+		"Endpoint StatusCodeUnchecked settings not applied to the bazBackend2")
 }
 
 func TestConfig_initKONoBackends(t *testing.T) {
