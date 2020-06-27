@@ -126,6 +126,111 @@ func TestNewParser_ok(t *testing.T) {
 		t.FailNow()
 	}
 }
+func TestNewParserWithAddress_ok(t *testing.T) {
+	configPath := "/tmp/ok.json"
+	configContent := []byte(`{
+    "version": 2,
+	"name": "My lovely gateway",
+	"address": "localhost:9090",
+    "port": 8080,
+    "cache_ttl": "3600s",
+    "timeout": "3s",
+    "endpoints": [
+        {
+            "endpoint": "/github",
+            "method": "GET",
+            "extra_config" : {"user":"test","hits":6,"parents":["gomez","morticia"]},
+            "backend": [
+                {
+                    "host": [
+                        "https://api.github.com"
+                    ],
+                    "url_pattern": "/",
+                    "whitelist": [
+                        "authorizations_url",
+                        "code_search_url"
+                    ],
+                    "extra_config" : {"user":"test","hits":6,"parents":["gomez","morticia"]}
+                }
+            ]
+        },
+        {
+            "endpoint": "/supu",
+            "method": "GET",
+            "concurrent_calls": 3,
+            "backend": [
+                {
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
+                    "url_pattern": "/__debug/supu"
+                }
+            ]
+        },
+        {
+            "endpoint": "/combination/{id}",
+            "method": "GET",
+            "backend": [
+                {
+                    "group": "first_post",
+                    "host": [
+                        "https://jsonplaceholder.typicode.com"
+                    ],
+                    "url_pattern": "/posts/{id}",
+                    "blacklist": [
+                        "userId"
+                    ]
+                },
+                {
+                    "host": [
+                        "https://jsonplaceholder.typicode.com"
+                    ],
+                    "url_pattern": "/users/{id}",
+                    "mapping": {
+                        "email": "personal_email"
+                    }
+                }
+            ]
+        }
+    ],
+    "extra_config" : {"user":"test","hits":6,"parents":["gomez","morticia"]}
+}`)
+	if err := ioutil.WriteFile(configPath, configContent, 0644); err != nil {
+		t.FailNow()
+	}
+
+	serviceConfig, err := NewParser().Parse(configPath)
+
+	if serviceConfig.Port == 8080 {
+		t.Errorf("Expected `address` to bind stronger than `port`.`port` want %v `port` got %v", 9090, serviceConfig.Port)
+	}
+
+	if err != nil {
+		t.Error("Unexpected error. Got", err.Error())
+	}
+	testExtraConfig(serviceConfig.ExtraConfig, t)
+
+	endpoint := serviceConfig.Endpoints[0]
+	endpointExtraConfiguration := endpoint.ExtraConfig
+
+	if endpointExtraConfiguration != nil {
+		testExtraConfig(endpointExtraConfiguration, t)
+	} else {
+		t.Error("Extra config is not present in EndpointConfig")
+	}
+
+	backend := endpoint.Backend[0]
+	backendExtraConfiguration := backend.ExtraConfig
+	if backendExtraConfiguration != nil {
+		testExtraConfig(backendExtraConfiguration, t)
+	} else {
+		t.Error("Extra config is not present in BackendConfig")
+	}
+
+	if err := os.Remove(configPath); err != nil {
+		t.FailNow()
+	}
+}
 
 func TestNewParser_errorMessages(t *testing.T) {
 	for _, configContent := range []struct {

@@ -103,8 +103,8 @@ func RunServer(ctx context.Context, cfg config.ServiceConfig, handler http.Handl
 
 // NewServer returns a http.Server ready to serve the injected handler
 func NewServer(cfg config.ServiceConfig, handler http.Handler) *http.Server {
-	return &http.Server{
-		Addr:              fmt.Sprintf(":%d", cfg.Port),
+	srv := &http.Server{
+		// Addr:              fmt.Sprintf(":%d", cfg.Port),
 		Handler:           handler,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
@@ -112,6 +112,14 @@ func NewServer(cfg config.ServiceConfig, handler http.Handler) *http.Server {
 		IdleTimeout:       cfg.IdleTimeout,
 		TLSConfig:         ParseTLSConfig(cfg.TLS),
 	}
+
+	if cfg.Address != "" {
+		srv.Addr = cfg.Address
+	} else {
+		srv.Addr = fmt.Sprintf(":%d", cfg.Port)
+	}
+
+	return srv
 }
 
 // ParseTLSConfig creates a tls.Config from the TLS section of the service configuration

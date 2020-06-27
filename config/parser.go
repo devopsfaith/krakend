@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -134,6 +136,7 @@ type parseableServiceConfig struct {
 	CacheTTL              string                     `json:"cache_ttl"`
 	Host                  []string                   `json:"host"`
 	Port                  int                        `json:"port"`
+	Address               string                     `json:"address"`
 	Version               int                        `json:"version"`
 	ExtraConfig           *ExtraConfig               `json:"extra_config,omitempty"`
 	ReadTimeout           string                     `json:"read_timeout"`
@@ -163,6 +166,7 @@ func (p *parseableServiceConfig) normalize() ServiceConfig {
 		CacheTTL:              parseDuration(p.CacheTTL),
 		Host:                  p.Host,
 		Port:                  p.Port,
+		Address:               p.Address,
 		Version:               p.Version,
 		Debug:                 p.Debug,
 		ReadTimeout:           parseDuration(p.ReadTimeout),
@@ -194,6 +198,12 @@ func (p *parseableServiceConfig) normalize() ServiceConfig {
 			CipherSuites:             p.TLS.CipherSuites,
 		}
 	}
+
+	if p.Address != "" {
+		_, port, _ := net.SplitHostPort(p.Address)
+		cfg.Port, _ = strconv.Atoi(port)
+	}
+
 	if p.ExtraConfig != nil {
 		cfg.ExtraConfig = *p.ExtraConfig
 	}

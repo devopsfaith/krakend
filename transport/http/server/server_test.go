@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -94,6 +95,53 @@ func TestRunServer_plain(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Errorf("unexpected status code: %d", resp.StatusCode)
 		return
+	}
+	cancel()
+
+	if err = <-done; err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRunServer_address(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	port := newPort()
+	port2 := newPort()
+
+	done := make(chan error)
+	go func() {
+		done <- RunServer(
+			ctx,
+			config.ServiceConfig{
+				Port:    port,
+				Address: fmt.Sprintf(":%d", port2),
+			},
+			http.HandlerFunc(dummyHandler),
+		)
+	}()
+
+	<-time.After(100 * time.Millisecond)
+
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d", port2))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if resp.StatusCode != 200 {
+		t.Errorf("unexpected status code: %d", resp.StatusCode)
+		return
+	}
+
+	_, err2 := http.Get(fmt.Sprintf("http://localhost:%d", port))
+	if err2 == nil {
+		t.Error("expected `connection refused` error")
+		return
+	} else {
+		if !strings.Contains(err2.Error(), "connect: connection refused") {
+			t.Errorf("expected `connection refused` error; got %v", err2)
+		}
 	}
 	cancel()
 

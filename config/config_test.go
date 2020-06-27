@@ -203,8 +203,7 @@ func TestConfig_init(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-
-	if hash != "08DTVE8Iwh1M8aRURBgk/rYcWc6BIwIgW/BflQo1OnE=" {
+	if hash != "S931XLvg29IBtEyiQKi5Oi4rfPVa0E5DL7hJurV3/YU=" {
 		t.Errorf("unexpected hash: %s", hash)
 	}
 }

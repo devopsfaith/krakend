@@ -44,6 +44,10 @@ type ServiceConfig struct {
 	CacheTTL time.Duration `mapstructure:"cache_ttl"`
 	// default set of hosts
 	Host []string `mapstructure:"host"`
+	// address to bind the krakend service
+	// binds stronger than port
+	// e.g. localhost:8080 or :8080
+	Address string `mapstructure:"address"`
 	// port to bind the krakend service
 	Port int `mapstructure:"port"`
 	// version code of the configuration
