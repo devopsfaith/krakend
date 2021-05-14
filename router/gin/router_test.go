@@ -83,6 +83,11 @@ func TestDefaultFactory_ok(t *testing.T) {
 				},
 			},
 		},
+		ExtraConfig: map[string]interface{}{
+			Namespace: map[string]interface{}{
+				"auto_options": true,
+			},
+		},
 	}
 
 	go func() { r.Run(serviceCfg) }()
@@ -123,6 +128,18 @@ func TestDefaultFactory_ok(t *testing.T) {
 		if content != expectedBody {
 			t.Error("Unexpected body:", content, "expected:", expectedBody)
 		}
+	}
+
+	req, _ := http.NewRequest("OPTIONS", fmt.Sprintf("http://127.0.0.1:8072%s", serviceCfg.Endpoints[0].Endpoint), nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Error("Making the request:", err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	expectedAllowHeader := "DELETE, GET, PATCH, POST, PUT"
+	if allowed := resp.Header.Get("Allow"); allowed != expectedAllowHeader {
+		t.Errorf("unexpected allowed header: %s", allowed)
 	}
 }
 
@@ -275,9 +292,6 @@ func checkResponseIs404(t *testing.T, req *http.Request) {
 	content := string(body)
 	if resp.Header.Get("Cache-Control") != "" {
 		t.Error(req.URL.String(), "Cache-Control error:", resp.Header.Get("Cache-Control"))
-	}
-	if resp.Header.Get(router.CompleteResponseHeaderName) != router.HeaderIncompleteResponseValue {
-		t.Error(req.URL.String(), router.CompleteResponseHeaderName, "error:", resp.Header.Get(router.CompleteResponseHeaderName))
 	}
 	if resp.Header.Get("Content-Type") != "text/plain" {
 		t.Error(req.URL.String(), "Content-Type error:", resp.Header.Get("Content-Type"))

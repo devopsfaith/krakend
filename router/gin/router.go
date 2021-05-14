@@ -5,16 +5,20 @@ package gin
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/devopsfaith/krakend/config"
+	"github.com/devopsfaith/krakend/core"
 	"github.com/devopsfaith/krakend/logging"
 	"github.com/devopsfaith/krakend/proxy"
 	"github.com/devopsfaith/krakend/router"
 )
+
+const Namespace = "github_com/devopsfaith/krakend/router/gin"
 
 // RunServerFunc is a func that will run the http Server with the given params.
 type RunServerFunc func(context.Context, config.ServiceConfig, http.Handler) error
@@ -65,6 +69,7 @@ func (rf factory) NewWithContext(ctx context.Context) router.Router {
 		ctx:        ctx,
 		runServerF: rf.cfg.RunServer,
 		mu:         new(sync.Mutex),
+		urlCatalog: map[string][]string{},
 	}
 }
 
@@ -73,6 +78,7 @@ type ginRouter struct {
 	ctx        context.Context
 	runServerF RunServerFunc
 	mu         *sync.Mutex
+	urlCatalog map[string][]string
 }
 
 // Run implements the router interface
@@ -104,6 +110,12 @@ func (r ginRouter) Run(cfg config.ServiceConfig) {
 	endpointGroup.Use(r.cfg.Middlewares...)
 
 	r.registerKrakendEndpoints(endpointGroup, cfg.Endpoints)
+
+	if opt, ok := cfg.ExtraConfig[Namespace].(map[string]interface{}); ok {
+		if enabled, ok := opt["auto_options"].(bool); ok && enabled {
+			r.registerOptionEndpoints(endpointGroup)
+		}
+	}
 
 	if err := r.runServerF(r.ctx, cfg, r.cfg.Engine); err != nil {
 		r.cfg.Logger.Error(err.Error())
@@ -147,5 +159,24 @@ func (r ginRouter) registerKrakendEndpoint(rg *gin.RouterGroup, method string, e
 		rg.DELETE(path, h)
 	default:
 		r.cfg.Logger.Error("Unsupported method", method)
+		return
+	}
+
+	methods, ok := r.urlCatalog[path]
+	if !ok {
+		r.urlCatalog[path] = []string{method}
+		return
+	}
+	r.urlCatalog[path] = append(methods, method)
+}
+
+func (r ginRouter) registerOptionEndpoints(rg *gin.RouterGroup) {
+	for path, methods := range r.urlCatalog {
+		sort.Strings(methods)
+		allowed := strings.Join(methods, ", ")
+		rg.OPTIONS(path, func(c *gin.Context) {
+			c.Header("Allow", allowed)
+			c.Header(core.KrakendHeaderName, core.KrakendHeaderValue)
+		})
 	}
 }
