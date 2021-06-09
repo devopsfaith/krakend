@@ -22,7 +22,9 @@ func TestDetailedHTTPStatusHandler(t *testing.T) {
 	}
 	sh := GetHTTPStatusHandler(cfg)
 
-	for _, code := range []int{http.StatusOK, http.StatusCreated} {
+	for _, code := range []int{http.StatusOK, http.StatusCreated,
+		http.StatusAccepted, http.StatusNonAuthoritativeInfo, http.StatusNoContent,
+		http.StatusResetContent} {
 		resp := &http.Response{
 			StatusCode: code,
 			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"foo":"bar"}`)),
@@ -82,7 +84,9 @@ func TestDetailedHTTPStatusHandler(t *testing.T) {
 func TestDefaultHTTPStatusHandler(t *testing.T) {
 	sh := GetHTTPStatusHandler(&config.Backend{})
 
-	for _, code := range []int{http.StatusOK, http.StatusCreated} {
+	for _, code := range []int{http.StatusOK, http.StatusCreated,
+		http.StatusAccepted, http.StatusNonAuthoritativeInfo, http.StatusNoContent,
+		http.StatusResetContent} {
 		resp := &http.Response{
 			StatusCode: code,
 			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"foo":"bar"}`)),

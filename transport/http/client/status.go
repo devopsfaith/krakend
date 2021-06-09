@@ -15,7 +15,7 @@ import (
 const Namespace = "github.com/devopsfaith/krakend/http"
 
 // ErrInvalidStatusCode is the error returned by the http proxy when the received status code
-// is not a 200 nor a 201
+// is not a successful http status code
 var ErrInvalidStatusCode = errors.New("Invalid status code")
 
 // HTTPStatusHandler defines how we tread the http response code
@@ -39,7 +39,7 @@ func GetHTTPStatusHandler(remote *config.Backend) HTTPStatusHandler {
 
 // DefaultHTTPStatusHandler is the default implementation of HTTPStatusHandler
 func DefaultHTTPStatusHandler(ctx context.Context, resp *http.Response) (*http.Response, error) {
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+	if !isSuccessResponse(resp.StatusCode) {
 		return nil, ErrInvalidStatusCode
 	}
 
@@ -93,4 +93,14 @@ func (r HTTPResponseError) Name() string {
 // StatusCode returns the status code returned by the backend
 func (r HTTPResponseError) StatusCode() int {
 	return r.Code
+}
+
+func isSuccessResponse(statusCode int) bool {
+	switch statusCode {
+	case http.StatusOK, http.StatusCreated, http.StatusAccepted,
+		http.StatusNonAuthoritativeInfo, http.StatusNoContent,
+		http.StatusResetContent:
+		return true
+	}
+	return false
 }
