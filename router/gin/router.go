@@ -90,7 +90,6 @@ func (r ginRouter) Run(cfg config.ServiceConfig) {
 	router.InitHTTPDefaultTransport(cfg)
 
 	r.cfg.Engine.RedirectTrailingSlash = true
-	r.cfg.Engine.RedirectFixedPath = true
 	r.cfg.Engine.HandleMethodNotAllowed = true
 
 	if cfg.Debug {
