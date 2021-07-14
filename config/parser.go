@@ -88,6 +88,9 @@ func NewParseError(err error, configFile string, offset int) *ParseError {
 }
 
 func getErrorRowCol(source []byte, offset int) (row, col int) {
+	if len(source) < offset {
+		offset = len(source) - 1
+	}
 	for i := 0; i < offset; i++ {
 		v := source[i]
 		if v == '\r' {
