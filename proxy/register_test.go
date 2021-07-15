@@ -7,11 +7,8 @@ import (
 
 func TestNewRegister_responseCombiner_ok(t *testing.T) {
 	r := NewRegister()
-	r.SetResponseCombiner("name1", func(total int, parts []*Response) *Response {
-		if total < 0 || total >= len(parts) {
-			return nil
-		}
-		return parts[total]
+	r.SetResponseCombiner("name1", func(acc *Response, inc *Response, err error) (*Response, error) {
+		return acc, nil
 	})
 
 	rc, ok := r.GetResponseCombiner("name1")
@@ -20,7 +17,7 @@ func TestNewRegister_responseCombiner_ok(t *testing.T) {
 		return
 	}
 
-	result := rc(0, []*Response{{IsComplete: true, Data: map[string]interface{}{"a": 42}}})
+	result, _ := rc(&Response{IsComplete: true, Data: map[string]interface{}{"a": 42}}, nil, nil)
 
 	if result == nil {
 		t.Error("expecting result")
@@ -51,7 +48,7 @@ func TestNewRegister_responseCombiner_fallbackIfErrored(t *testing.T) {
 
 	original := &Response{IsComplete: true, Data: map[string]interface{}{"a": 42}}
 
-	result := rc(0, []*Response{original})
+	result, _ := rc(original, nil, nil)
 
 	if result != original {
 		t.Error("unexpected result:", result)
@@ -70,7 +67,7 @@ func TestNewRegister_responseCombiner_fallbackIfUnknown(t *testing.T) {
 
 	original := &Response{IsComplete: true, Data: map[string]interface{}{"a": 42}}
 
-	result := rc(0, []*Response{original})
+	result, _ := rc(original, nil, nil)
 
 	if result != original {
 		t.Error("unexpected result:", result)

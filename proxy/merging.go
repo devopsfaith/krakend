@@ -193,22 +193,10 @@ func newIncrementalMergeAccumulator(total int, combiner ResponseCombiner) *incre
 
 func (i *incrementalMergeAccumulator) Merge(res *Response, err error) {
 	i.pending--
+	i.data, err = i.combiner(i.data, res, err)
 	if err != nil {
 		i.errs = append(i.errs, err)
-		if i.data != nil {
-			i.data.IsComplete = false
-		}
-		return
 	}
-	if res == nil {
-		i.errs = append(i.errs, errNullResult)
-		return
-	}
-	if i.data == nil {
-		i.data = res
-		return
-	}
-	i.data = i.combiner(2, []*Response{i.data, res})
 }
 
 func (i *incrementalMergeAccumulator) Result() (*Response, error) {
@@ -274,7 +262,7 @@ func (m mergeError) Error() string {
 }
 
 // ResponseCombiner func to merge the collected responses into a single one
-type ResponseCombiner func(int, []*Response) *Response
+type ResponseCombiner func(*Response, *Response, error) (*Response, error)
 
 // RegisterResponseCombiner adds a new response combiner into the internal register
 func RegisterResponseCombiner(name string, f ResponseCombiner) {
@@ -307,28 +295,29 @@ func getResponseCombiner(extra config.ExtraConfig) ResponseCombiner {
 	return combiner
 }
 
-func combineData(total int, parts []*Response) *Response {
-	isComplete := len(parts) == total
-	var retResponse *Response
-	for _, part := range parts {
-		if part == nil || part.Data == nil {
-			isComplete = false
-			continue
+func combineData(acc *Response, inc *Response, err error) (*Response, error) {
+	if err != nil {
+		if acc != nil {
+			acc.IsComplete = false
 		}
-		isComplete = isComplete && part.IsComplete
-		if retResponse == nil {
-			retResponse = part
-			continue
+		return acc, err
+	}
+	if inc == nil {
+		if acc != nil {
+			acc.IsComplete = false
 		}
-		for k, v := range part.Data {
-			retResponse.Data[k] = v
-		}
+		return acc, errNullResult
+	}
+	if acc == nil {
+		return inc, nil
 	}
 
-	if nil == retResponse {
-		// do not allow nil data in the response:
-		return &Response{Data: make(map[string]interface{}, 0), IsComplete: isComplete}
+	for k,v := range inc.Data {
+		if acc.Data == nil {
+			acc.Data = make(map[string]interface{})
+		}
+		acc.Data[k] = v
 	}
-	retResponse.IsComplete = isComplete
-	return retResponse
+	acc.IsComplete = acc.IsComplete && inc.IsComplete
+	return acc, nil
 }
